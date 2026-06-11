@@ -178,18 +178,19 @@ async function retrieveResult(statementId, statusJson) {
     throw new Error('Missing result object in status response');
   }
 
-  const columns = result.manifest?.schema?.columns;
+  const manifest = statusJson.manifest;
+  const columns = manifest?.schema?.columns;
   if (!Array.isArray(columns) || columns.length === 0) {
     throw new Error('Result manifest does not contain schema columns');
   }
 
   const rows = Array.isArray(result.data_array) ? [...result.data_array] : [];
-  const totalChunks = Number(result.manifest?.total_chunk_count || 1);
+  const totalChunks = Number(manifest?.total_chunk_count || 1);
 
   if (totalChunks > 1) {
-    if (Array.isArray(result.manifest?.chunks) && result.manifest.chunks.length > 1) {
-      for (let idx = 1; idx < result.manifest.chunks.length; idx += 1) {
-        const chunk = result.manifest.chunks[idx];
+    if (Array.isArray(manifest?.chunks) && manifest.chunks.length > 1) {
+      for (let idx = 1; idx < manifest.chunks.length; idx += 1) {
+        const chunk = manifest.chunks[idx];
         if (!chunk?.url) {
           throw new Error(`Missing chunk URL in manifest chunk index ${idx}`);
         }
