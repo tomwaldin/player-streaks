@@ -33,6 +33,33 @@
       color: #888;
     }
 
+    .controls {
+      max-width: 1100px;
+      margin: 0 auto 1rem;
+    }
+
+    .search-wrap {
+      position: relative;
+      max-width: 320px;
+    }
+
+    .search-wrap input {
+      width: 100%;
+      padding: 0.6rem 0.9rem;
+      background: #1a1a28;
+      border: 1px solid #2a2a3a;
+      border-radius: 8px;
+      color: #e8e8f0;
+      font-size: 0.875rem;
+      outline: none;
+    }
+
+    .search-wrap input:focus {
+      border-color: #555;
+    }
+
+    .search-wrap input::placeholder { color: #555; }
+
     .table-wrap {
       max-width: 1100px;
       margin: 0 auto;
@@ -47,9 +74,7 @@
       font-size: 0.875rem;
     }
 
-    thead {
-      background: #1a1a28;
-    }
+    thead { background: #1a1a28; }
 
     thead th {
       padding: 0.75rem 1rem;
@@ -105,8 +130,15 @@
 <body>
   <header>
     <h1>Player Streaks</h1>
-    <p>ruby_sweeps.gold.user_streaks</p>
+    <p>ruby_sweeps.gold.user_streaks — active, latest date</p>
   </header>
+
+  <div class="controls">
+    <div class="search-wrap">
+      <input type="text" id="search" placeholder="Search user ID…" autocomplete="off" />
+      <datalist id="user-ids"></datalist>
+    </div>
+  </div>
 
   <div class="table-wrap">
     <div class="status" id="status">
@@ -119,11 +151,34 @@
   </div>
 
   <script>
+    let allRows = [];
+    let cols = [];
+
+    function renderRows(rows) {
+      const tbody = document.getElementById('tbody');
+      if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="' + cols.length + '" style="text-align:center;color:#666;padding:2rem">No matching users</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map(row =>
+        '<tr>' + cols.map(c => `<td>${row[c] ?? ''}</td>`).join('') + '</tr>'
+      ).join('');
+    }
+
+    function onSearch(e) {
+      const q = e.target.value.trim().toLowerCase();
+      const filtered = q
+        ? allRows.filter(r => String(r[cols[0]] ?? '').toLowerCase().includes(q))
+        : allRows;
+      renderRows(filtered);
+    }
+
     async function load() {
       const statusEl = document.getElementById('status');
       const tableEl  = document.getElementById('table');
       const theadEl  = document.getElementById('thead');
-      const tbodyEl  = document.getElementById('tbody');
+      const datalist = document.getElementById('user-ids');
+      const search   = document.getElementById('search');
 
       try {
         const res = await fetch('/leaderboard');
@@ -135,13 +190,22 @@
           return;
         }
 
-        const cols = Object.keys(rows[0]);
+        allRows = rows;
+        cols = Object.keys(rows[0]);
+
+        // assume first column is user id — populate datalist
+        const userIdCol = cols[0];
+        const uniqueIds = [...new Set(rows.map(r => r[userIdCol]))];
+        datalist.innerHTML = uniqueIds.map(id => `<option value="${id}">`).join('');
+        search.setAttribute('list', 'user-ids');
 
         theadEl.innerHTML = '<tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr>';
-        tbodyEl.innerHTML = '<tr>' + cols.map(c => `<td>${rows[0][c] ?? ''}</td>`).join('') + '</tr>';
+        renderRows(allRows);
 
         statusEl.style.display = 'none';
         tableEl.style.display = 'table';
+
+        search.addEventListener('input', onSearch);
       } catch (err) {
         statusEl.className = 'status error';
         statusEl.textContent = `Error: ${err.message}`;

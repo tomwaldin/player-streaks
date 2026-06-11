@@ -15,7 +15,8 @@ const {
 const QUERY = `
   SELECT *
   FROM ruby_sweeps.gold.user_streaks
-  LIMIT 10
+  WHERE is_active = true
+    AND date = (SELECT MAX(date) FROM ruby_sweeps.gold.user_streaks)
 `;
 
 const cacheTtlSeconds = Number(CACHE_TTL_SECONDS) || 60;
